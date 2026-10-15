@@ -17,7 +17,7 @@ A small Flask web app for running basic security checks on your own machine and 
 
 - Passwords are hashed (Werkzeug scrypt). Failed logins look identical whether or not the username exists, and login attempts are rate limited.
 - CSRF protection on every form and every API call, a strict Content-Security-Policy, and no inline scripts or styles.
-- No default credentials. The first admin is created from `.env` only if the password is at least 12 characters.
+- No default credentials. The first admin is created from `.env` only if the password is at least 8 characters and not a common password.
 - Registration is off by default.
 - Each user sees only their own data.
 - **Scan targets are restricted.** By default only loopback and private-network addresses can be scanned. Cloud metadata, link-local, multicast and other reserved addresses are always blocked. The hostname is resolved once, checked, and the checked IP is the one scanned.
@@ -46,7 +46,7 @@ python -c "import secrets; print(secrets.token_hex(32))"
 ```
 SECRET_KEY=<the generated value>
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=<at least 12 characters>
+ADMIN_PASSWORD=<at least 8 characters>
 ```
 
 Start the app, then open http://127.0.0.1:5000 and sign in:
@@ -64,7 +64,7 @@ All settings are environment variables, read from `.env`.
 | Variable                                                            | Default                               | Purpose                                                                          |
 | ------------------------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------- |
 | `SECRET_KEY`                                                        | none (required)                       | Signs sessions. At least 32 characters.                                          |
-| `ADMIN_USERNAME` / `ADMIN_PASSWORD`                                 | `admin` / blank                       | First-run admin. No account is created without a 12+ character password.         |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD`                                 | `admin` / blank                       | First-run admin. No account is created unless the password meets the rules (8+ characters, not a common password).         |
 | `REGISTRATION_ENABLED`                                              | `false`                               | Allow people to create their own accounts.                                       |
 | `SCAN_ALLOW_PUBLIC`                                                 | `false`                               | Allow scanning public IP addresses. Only for systems you are authorised to test. |
 | `SCAN_MAX_PORTS`                                                    | `5000`                                | Largest port range per scan.                                                     |
@@ -129,7 +129,7 @@ All endpoints need a signed-in session and return JSON. Send the CSRF token in a
 - There is no two-factor authentication and no self-service password reset. To reset a password, run this from the project folder with the virtual environment active:
 
 ```powershell
-  python -c "import getpass; from app import create_app, repository as repo; from werkzeug.security import generate_password_hash as h; pw=getpass.getpass('New password (12+ chars): '); assert len(pw)>=12; app=create_app(); app.app_context().push(); u=repo.get_user_by_username('admin'); repo.set_password(u['id'], h(pw)); print('password reset')"
+  python -c "import getpass; from app import create_app, repository as repo, passwords; from werkzeug.security import generate_password_hash as h; pw=getpass.getpass('New password: '); err=passwords.problem_with(pw, 'admin'); assert not err, err; app=create_app(); app.app_context().push(); u=repo.get_user_by_username('admin'); repo.set_password(u['id'], h(pw)); print('password reset')"
 ```
 
 - Port scans and integrity checks run inside the request, so a very large scan can take a while.

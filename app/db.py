@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 from flask import current_app, g
 
 SCHEMA_VERSION = 1
-MIN_ADMIN_PASSWORD = 12
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -97,9 +96,10 @@ def init_db() -> None:
 
 
 def ensure_admin() -> None:
-    """Create the first admin from .env, only if no users exist and the password is strong enough."""
+    """Create the first admin from .env, only if no users exist and the password meets the rules."""
     from werkzeug.security import generate_password_hash
 
+    from . import passwords
     from . import repository as repo
 
     if repo.count_users() > 0:
@@ -107,11 +107,10 @@ def ensure_admin() -> None:
 
     username = (current_app.config["ADMIN_USERNAME"] or "").strip() or "admin"
     password = current_app.config["ADMIN_PASSWORD"] or ""
-    if len(password) < MIN_ADMIN_PASSWORD:
+    problem = passwords.problem_with(password, username)
+    if problem:
         current_app.logger.warning(
-            "No users exist and ADMIN_PASSWORD is missing or shorter than %d characters; "
-            "no admin account was created.",
-            MIN_ADMIN_PASSWORD,
+            "No users exist and ADMIN_PASSWORD is missing or not acceptable (%s); no admin account was created.", problem
         )
         return
 

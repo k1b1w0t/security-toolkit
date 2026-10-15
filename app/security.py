@@ -128,8 +128,10 @@ def resolve_scan_directory(directory: str) -> str:
 
 
 def init_app(app) -> None:
+    from . import passwords
+
     app.before_request(load_user)
 
     @app.context_processor
     def inject_user():
-        return {"current_user": g.get("user")}
+        return {"current_user": g.get("user"), "password_min_length": passwords.MIN_LENGTH}

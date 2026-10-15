@@ -87,7 +87,7 @@ def test_duplicate_username_rejected(reg_client):
 
 def test_short_password_rejected(reg_client):
     r = register(reg_client, password="short")
-    assert r.status_code == 200 and b"at least 12" in r.data
+    assert r.status_code == 200 and b"at least 8" in r.data
 
 
 def test_change_password(client):
@@ -129,3 +129,12 @@ def test_security_headers(client):
     assert "default-src 'self'" in r.headers["Content-Security-Policy"]
     assert r.headers["X-Frame-Options"] == "DENY"
     assert r.headers["Cache-Control"] == "no-store"
+
+
+def test_eight_character_password_accepted(reg_client):
+      assert register(reg_client, password="x9!kQ2#m").status_code == 302
+
+
+def test_common_password_rejected_at_registration(reg_client):
+      r = register(reg_client, password="password123")
+      assert r.status_code == 200 and b"too common" in r.data
